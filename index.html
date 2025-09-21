@@ -3,229 +3,189 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width,initial-scale=1" />
-  <title>Quick QR Maker</title>
+  <title>My YouTube Videos</title>
   <style>
-    /* Load your TTF font */
-    @font-face {
-      font-family: "CustomFont";
-      src: url("./assets/1.ttf") format("truetype");
-      font-weight: normal;
-      font-style: normal;
-    }
-
     body {
       margin: 0;
-      font-family: "CustomFont", sans-serif;
-      background: #1a1d29;
-      color: #eee;
-      padding: 20px;
-      display: flex;
-      justify-content: center;
-      align-items: flex-start;
+      font-family: Arial, sans-serif;
+      background: #0a0a0a;
+      color: #fff;
+      overflow-x: hidden;
     }
 
-    .wrapper {
+    /* Rain canvas in the background */
+    #rain {
+      position: fixed;
+      top: 0;
+      left: 0;
       width: 100%;
-      max-width: 580px;
-      background: #2a2f45;
-      border: 3px dashed #555;
-      border-radius: 14px;
-      padding: 20px;
-      box-shadow: 5px 6px 0px #00000055;
+      height: 100%;
+      z-index: 0;
+      pointer-events: none;
     }
 
-    h1 {
-      margin: 0 0 10px;
-      font-size: 22px;
-      font-weight: 700;
-    }
-    p {
-      margin: 0 0 15px;
-      font-size: 14px;
-      color: #bbb;
+    .container {
+      position: relative;
+      z-index: 1;
+      width: 100%;
+      max-width: 900px;
+      margin: 0 auto;
+      padding: 30px 20px;
+      display: flex;
+      flex-direction: column;
+      gap: 40px;
     }
 
-    label {
-      font-size: 13px;
+    .video {
+      background: rgba(20, 20, 20, 0.9);
+      border-radius: 16px;
+      overflow: hidden;
+      box-shadow: 0 8px 20px rgba(0,0,0,0.6);
+      animation: fadeIn 1.5s ease forwards, subtleShake 6s infinite ease-in-out;
+      opacity: 0;
+    }
+
+    iframe {
+      width: 100%;
+      height: 500px;
+      border: none;
       display: block;
-      margin-bottom: 5px;
-      color: #ccc;
     }
 
-    input, select {
-      width: 100%;
-      padding: 10px;
-      border-radius: 6px;
-      border: 2px solid #666;
-      background: #222;
-      color: #eee;
-      margin-bottom: 10px;
-      font-size: 14px;
-      font-family: "CustomFont", sans-serif;
-    }
-
-    .buttons {
-      display: flex;
-      gap: 8px;
-      margin: 12px 0;
-    }
-    button {
-      flex: 1;
-      padding: 10px;
-      font-weight: bold;
-      border-radius: 8px;
-      cursor: pointer;
-      border: 2px solid #444;
-      font-family: "CustomFont", sans-serif;
-    }
-    button.primary {
-      background: #6ee7b7;
-      color: #111;
-      border-color: #4ade80;
-    }
-    button.ghost {
-      background: #333;
-      color: #aaa;
-    }
-    button:disabled {
-      opacity: 0.5;
-      cursor: not-allowed;
-    }
-
-    .preview {
-      margin-top: 15px;
-      background: #191d2c;
-      border-radius: 8px;
-      padding: 15px;
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-    }
-    #qrcode {
-      background: #fff;
-      padding: 10px;
-      border-radius: 8px;
-    }
-    .status {
-      font-size: 13px;
-      color: #aaa;
-      margin-left: 15px;
-      flex: 1;
-    }
-
-    footer {
-      margin-top: 20px;
+    .title {
+      padding: 14px;
+      font-size: 18px;
       text-align: center;
-      font-size: 12px;
-      color: #888;
-      border-top: 1px solid #333;
-      padding-top: 8px;
+      font-weight: bold;
+    }
+
+    /* Subtle always-running shake */
+    @keyframes subtleShake {
+      0% { transform: translate(0px, 0px) rotate(0deg); }
+      25% { transform: translate(1px, -1px) rotate(-0.3deg); }
+      50% { transform: translate(-1px, 1px) rotate(0.3deg); }
+      75% { transform: translate(1px, 1px) rotate(-0.3deg); }
+      100% { transform: translate(0px, 0px) rotate(0deg); }
+    }
+
+    /* Fade in animation */
+    @keyframes fadeIn {
+      from { opacity: 0; transform: translateY(30px); }
+      to { opacity: 1; transform: translateY(0); }
     }
   </style>
 </head>
 <body>
-  <div class="wrapper">
-    <h1>Quick QR Maker 🖍️</h1>
-    <p>Paste a website, hit "Generate", and boom — QR code.</p>
+  <canvas id="rain"></canvas>
+  <div id="videos" class="container"></div>
 
-    <label for="urlInput">Website / link</label>
-    <input id="urlInput" type="text" placeholder="like: example.com" />
-
-    <label for="sizeSelect">QR size</label>
-    <select id="sizeSelect">
-      <option value="128">Small (128px)</option>
-      <option value="256" selected>Medium (256px)</option>
-      <option value="512">Big (512px)</option>
-    </select>
-
-    <div class="buttons">
-      <button id="generateBtn" class="primary">Generate</button>
-      <button id="downloadBtn" class="ghost" disabled>Download</button>
-      <button id="clearBtn" class="ghost">Clear</button>
-    </div>
-
-    <div class="preview">
-      <div id="qrcode"></div>
-      <div class="status">
-        <div>Status:</div>
-        <div id="status">Waiting...</div>
-      </div>
-    </div>
-
-    <footer>Made kinda messy on purpose ✌️</footer>
-  </div>
-
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
   <script>
-    const urlInput = document.getElementById('urlInput');
-    const sizeSelect = document.getElementById('sizeSelect');
-    const generateBtn = document.getElementById('generateBtn');
-    const clearBtn = document.getElementById('clearBtn');
-    const downloadBtn = document.getElementById('downloadBtn');
-    const qrContainer = document.getElementById('qrcode');
-    const status = document.getElementById('status');
+    const API_KEY = "AIzaSyBVXhoiLJAZwL_kCB4b0SzPJFAyDExdvBk";
+    const CHANNEL_ID = "UCvioLqKnp-cychVIYHgOG3Q";
 
-    let lastDataUrl = null;
+    async function loadVideos() {
+      try {
+        // Step 1: Get uploads playlist ID
+        const channelRes = await fetch(
+          `https://www.googleapis.com/youtube/v3/channels?part=contentDetails&id=${CHANNEL_ID}&key=${API_KEY}`
+        );
+        const channelData = await channelRes.json();
+        const uploadsPlaylist = channelData.items[0].contentDetails.relatedPlaylists.uploads;
 
-    function normalizeUrl(raw) {
-      if (!raw) return '';
-      raw = raw.trim();
-      if (!/^https?:\/\//i.test(raw) && !raw.startsWith('mailto:')) {
-        return 'https://' + raw;
+        // Step 2: Get videos
+        const videosRes = await fetch(
+          `https://www.googleapis.com/youtube/v3/playlistItems?part=snippet&maxResults=15&playlistId=${uploadsPlaylist}&key=${API_KEY}`
+        );
+        const videosData = await videosRes.json();
+
+        const container = document.getElementById("videos");
+        container.innerHTML = "";
+
+        videosData.items.forEach((item, index) => {
+          const vid = item.snippet.resourceId.videoId;
+          const title = item.snippet.title;
+
+          const div = document.createElement("div");
+          div.className = "video";
+          div.style.animationDelay = `${index * 0.3}s`; // stagger fade-in
+          div.innerHTML = `
+            <iframe src="https://www.youtube.com/embed/${vid}" allowfullscreen></iframe>
+            <div class="title">${title}</div>
+          `;
+          container.appendChild(div);
+        });
+      } catch (err) {
+        console.error("Error loading videos:", err);
       }
-      return raw;
     }
 
-    function createQr(text, size) {
-      qrContainer.innerHTML = '';
-      lastDataUrl = null;
-      const qr = new QRCode(qrContainer, {
-        text: text,
-        width: size,
-        height: size,
-        correctLevel: QRCode.CorrectLevel.M
-      });
-      setTimeout(() => {
-        const canvas = qrContainer.querySelector('canvas');
-        if (canvas) {
-          try {
-            lastDataUrl = canvas.toDataURL('image/png');
-            downloadBtn.disabled = false;
-            status.textContent = 'Ready!';
-          } catch {
-            status.textContent = 'Preview only';
-          }
+    // --- Rain effect with cursor tilt ---
+    const canvas = document.getElementById("rain");
+    const ctx = canvas.getContext("2d");
+    let drops = [];
+    let tiltX = 0; // horizontal tilt based on cursor
+
+    function resizeCanvas() {
+      canvas.width = window.innerWidth;
+      canvas.height = window.innerHeight;
+    }
+    window.addEventListener("resize", resizeCanvas);
+    resizeCanvas();
+
+    class Drop {
+      constructor() {
+        this.reset();
+      }
+      reset() {
+        this.x = Math.random() * canvas.width;
+        this.y = Math.random() * canvas.height;
+        this.length = Math.random() * 20 + 10;
+        this.speed = Math.random() * 2 + 1; // slower: between 1 and 3
+      }
+      fall() {
+        this.y += this.speed;
+        this.x += tiltX * 0.1;
+        if (this.y > canvas.height || this.x < 0 || this.x > canvas.width) {
+          this.reset();
+          this.y = -this.length;
         }
-      }, 120);
+      }
+      draw() {
+        ctx.beginPath();
+        ctx.strokeStyle = "rgba(0, 150, 255, 0.7)";
+        ctx.lineWidth = 2;
+        ctx.moveTo(this.x, this.y);
+        ctx.lineTo(this.x - tiltX * 0.2, this.y + this.length);
+        ctx.stroke();
+      }
     }
 
-    generateBtn.addEventListener('click', () => {
-      const raw = urlInput.value;
-      if (!raw.trim()) {
-        alert('Yo, type something in first.');
-        return;
+    function createRain() {
+      drops = [];
+      for (let i = 0; i < 200; i++) {
+        drops.push(new Drop());
       }
-      const url = normalizeUrl(raw);
-      const size = parseInt(sizeSelect.value, 10) || 256;
-      status.textContent = 'Working...';
-      createQr(url, size);
+    }
+
+    function animateRain() {
+      ctx.clearRect(0, 0, canvas.width, canvas.height);
+      for (let drop of drops) {
+        drop.fall();
+        drop.draw();
+      }
+      requestAnimationFrame(animateRain);
+    }
+
+    // Capture cursor movement relative to center
+    window.addEventListener("mousemove", e => {
+      const centerX = window.innerWidth / 2;
+      tiltX = (e.clientX - centerX) / 50;
     });
 
-    downloadBtn.addEventListener('click', () => {
-      if (!lastDataUrl) return;
-      const a = document.createElement('a');
-      a.href = lastDataUrl;
-      a.download = 'qr.png';
-      a.click();
-    });
+    createRain();
+    animateRain();
 
-    clearBtn.addEventListener('click', () => {
-      urlInput.value = '';
-      qrContainer.innerHTML = '';
-      lastDataUrl = null;
-      downloadBtn.disabled = true;
-      status.textContent = 'Cleared';
-    });
+    loadVideos();
   </script>
 </body>
 </html>
