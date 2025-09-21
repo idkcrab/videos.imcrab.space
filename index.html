@@ -1,0 +1,231 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Quick QR Maker</title>
+  <style>
+    /* Load your TTF font */
+    @font-face {
+      font-family: "CustomFont";
+      src: url("./assets/1.ttf") format("truetype");
+      font-weight: normal;
+      font-style: normal;
+    }
+
+    body {
+      margin: 0;
+      font-family: "CustomFont", sans-serif;
+      background: #1a1d29;
+      color: #eee;
+      padding: 20px;
+      display: flex;
+      justify-content: center;
+      align-items: flex-start;
+    }
+
+    .wrapper {
+      width: 100%;
+      max-width: 580px;
+      background: #2a2f45;
+      border: 3px dashed #555;
+      border-radius: 14px;
+      padding: 20px;
+      box-shadow: 5px 6px 0px #00000055;
+    }
+
+    h1 {
+      margin: 0 0 10px;
+      font-size: 22px;
+      font-weight: 700;
+    }
+    p {
+      margin: 0 0 15px;
+      font-size: 14px;
+      color: #bbb;
+    }
+
+    label {
+      font-size: 13px;
+      display: block;
+      margin-bottom: 5px;
+      color: #ccc;
+    }
+
+    input, select {
+      width: 100%;
+      padding: 10px;
+      border-radius: 6px;
+      border: 2px solid #666;
+      background: #222;
+      color: #eee;
+      margin-bottom: 10px;
+      font-size: 14px;
+      font-family: "CustomFont", sans-serif;
+    }
+
+    .buttons {
+      display: flex;
+      gap: 8px;
+      margin: 12px 0;
+    }
+    button {
+      flex: 1;
+      padding: 10px;
+      font-weight: bold;
+      border-radius: 8px;
+      cursor: pointer;
+      border: 2px solid #444;
+      font-family: "CustomFont", sans-serif;
+    }
+    button.primary {
+      background: #6ee7b7;
+      color: #111;
+      border-color: #4ade80;
+    }
+    button.ghost {
+      background: #333;
+      color: #aaa;
+    }
+    button:disabled {
+      opacity: 0.5;
+      cursor: not-allowed;
+    }
+
+    .preview {
+      margin-top: 15px;
+      background: #191d2c;
+      border-radius: 8px;
+      padding: 15px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+    #qrcode {
+      background: #fff;
+      padding: 10px;
+      border-radius: 8px;
+    }
+    .status {
+      font-size: 13px;
+      color: #aaa;
+      margin-left: 15px;
+      flex: 1;
+    }
+
+    footer {
+      margin-top: 20px;
+      text-align: center;
+      font-size: 12px;
+      color: #888;
+      border-top: 1px solid #333;
+      padding-top: 8px;
+    }
+  </style>
+</head>
+<body>
+  <div class="wrapper">
+    <h1>Quick QR Maker 🖍️</h1>
+    <p>Paste a website, hit "Generate", and boom — QR code.</p>
+
+    <label for="urlInput">Website / link</label>
+    <input id="urlInput" type="text" placeholder="like: example.com" />
+
+    <label for="sizeSelect">QR size</label>
+    <select id="sizeSelect">
+      <option value="128">Small (128px)</option>
+      <option value="256" selected>Medium (256px)</option>
+      <option value="512">Big (512px)</option>
+    </select>
+
+    <div class="buttons">
+      <button id="generateBtn" class="primary">Generate</button>
+      <button id="downloadBtn" class="ghost" disabled>Download</button>
+      <button id="clearBtn" class="ghost">Clear</button>
+    </div>
+
+    <div class="preview">
+      <div id="qrcode"></div>
+      <div class="status">
+        <div>Status:</div>
+        <div id="status">Waiting...</div>
+      </div>
+    </div>
+
+    <footer>Made kinda messy on purpose ✌️</footer>
+  </div>
+
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+  <script>
+    const urlInput = document.getElementById('urlInput');
+    const sizeSelect = document.getElementById('sizeSelect');
+    const generateBtn = document.getElementById('generateBtn');
+    const clearBtn = document.getElementById('clearBtn');
+    const downloadBtn = document.getElementById('downloadBtn');
+    const qrContainer = document.getElementById('qrcode');
+    const status = document.getElementById('status');
+
+    let lastDataUrl = null;
+
+    function normalizeUrl(raw) {
+      if (!raw) return '';
+      raw = raw.trim();
+      if (!/^https?:\/\//i.test(raw) && !raw.startsWith('mailto:')) {
+        return 'https://' + raw;
+      }
+      return raw;
+    }
+
+    function createQr(text, size) {
+      qrContainer.innerHTML = '';
+      lastDataUrl = null;
+      const qr = new QRCode(qrContainer, {
+        text: text,
+        width: size,
+        height: size,
+        correctLevel: QRCode.CorrectLevel.M
+      });
+      setTimeout(() => {
+        const canvas = qrContainer.querySelector('canvas');
+        if (canvas) {
+          try {
+            lastDataUrl = canvas.toDataURL('image/png');
+            downloadBtn.disabled = false;
+            status.textContent = 'Ready!';
+          } catch {
+            status.textContent = 'Preview only';
+          }
+        }
+      }, 120);
+    }
+
+    generateBtn.addEventListener('click', () => {
+      const raw = urlInput.value;
+      if (!raw.trim()) {
+        alert('Yo, type something in first.');
+        return;
+      }
+      const url = normalizeUrl(raw);
+      const size = parseInt(sizeSelect.value, 10) || 256;
+      status.textContent = 'Working...';
+      createQr(url, size);
+    });
+
+    downloadBtn.addEventListener('click', () => {
+      if (!lastDataUrl) return;
+      const a = document.createElement('a');
+      a.href = lastDataUrl;
+      a.download = 'qr.png';
+      a.click();
+    });
+
+    clearBtn.addEventListener('click', () => {
+      urlInput.value = '';
+      qrContainer.innerHTML = '';
+      lastDataUrl = null;
+      downloadBtn.disabled = true;
+      status.textContent = 'Cleared';
+    });
+  </script>
+</body>
+</html>
